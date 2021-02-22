@@ -83,11 +83,11 @@ Options:
 
 ### Testing checker script
 
-    `docker-compose up aiven-checker-testing`
+    docker-compose up aiven-checker-testing
 
 ### Testing consumer script
 
-    `docker-compose up aiven-consumer-testing`
+    docker-compose up aiven-consumer-testing
     
 
 
