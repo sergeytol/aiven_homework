@@ -1,0 +1,134 @@
+version: "3.7"
+
+services:
+
+  aiven-postgres:
+    container_name: aiven-postgres
+    image: postgres
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./install/init-dev.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - aiven
+
+  aiven-zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: aiven-zookeeper
+    depends_on:
+      - aiven-postgres
+    restart: always
+    networks:
+      - aiven
+
+  aiven-kafka:
+    image: wurstmeister/kafka
+    container_name: aiven-kafka
+    depends_on:
+      - aiven-zookeeper
+    restart: always
+    ports:
+      - "9092:9092"
+    env_file:
+      - .env
+    networks:
+      - aiven
+
+  aiven-kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: aiven-kafdrop
+    depends_on:
+      - aiven-kafka
+    restart: always
+    ports:
+      - "9000:9000"
+    env_file:
+      - .env
+    environment:
+      KAFKA_BROKERCONNECT: aiven-kafka:9092
+      JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
+    networks:
+      - aiven
+
+  aiven-checker:
+    container_name: aiven-checker
+    depends_on:
+      - aiven-kafka
+    restart: always
+    build:
+      context: checker
+    env_file:
+      - .env
+    command: python main.py
+    volumes:
+      - ./checker:/src
+      - ./checker/logs:/src/logs
+    networks:
+      - aiven
+
+  aiven-consumer:
+    container_name: aiven-consumer
+    depends_on:
+      - aiven-kafka
+    restart: always
+    build:
+      context: consumer
+    env_file:
+      - .env
+    command: python main.py
+    volumes:
+      - ./consumer:/src
+      - ./consumer/logs:/src/logs
+    networks:
+      - aiven
+
+  aiven-checker-testing:
+    container_name: aiven-checker-testing
+    build:
+      context: checker
+    env_file:
+      - .env
+    command: python -m pytest test.py
+    volumes:
+      - ./checker:/src
+    networks:
+      - aiven
+
+  aiven-postgres-testing:
+    container_name: aiven-postgres-testing
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=aiven-postgres-testing
+      - POSTGRES_PORT=5432
+    volumes:
+      - ./install/init-dev.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - aiven
+
+  aiven-consumer-testing:
+    container_name: aiven-consumer-testing
+    build:
+      context: consumer
+    env_file:
+      - .env
+    command: python -m pytest -s test.py
+    depends_on:
+      - aiven-postgres-testing
+    volumes:
+    - ./consumer:/src
+    networks:
+      - aiven
+
+volumes:
+  postgres-data:
+
+networks:
+  aiven:

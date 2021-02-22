@@ -1,0 +1,6 @@
+aiohttp
+python-dateutil
+kafka-python
+pytest
+pytest-asyncio
+aioresponses

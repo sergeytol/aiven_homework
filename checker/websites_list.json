@@ -1,0 +1,13 @@
+[
+  {
+    "url": "https://google.com/",
+    "pattern": "<title>Google<\\/title>"
+  },
+  {
+    "url": "https://sergeytolokonnikov.rocks/",
+    "pattern": "Sorry\\s1970"
+  },
+  {
+    "url": "https://desdjsejdsiejfsefjsoisejfioesfjo.site/"
+  }
+]

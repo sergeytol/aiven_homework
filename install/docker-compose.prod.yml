@@ -1,0 +1,84 @@
+version: "3.7"
+
+services:
+
+  aiven-checker:
+    container_name: aiven-checker
+    build:
+      context: checker
+    env_file:
+      - .env
+    command: python main.py
+    volumes:
+      - ./checker:/src
+      - ./checker/logs:/src/logs
+    networks:
+      - aiven
+
+  aiven-consumer:
+    container_name: aiven-consumer
+    build:
+      context: consumer
+    env_file:
+      - .env
+    command: python main.py
+    volumes:
+      - ./consumer:/src
+      - ./consumer/logs:/src/logs
+    networks:
+      - aiven
+
+  aiven-prod-init-db:
+    container_name: aiven-prod-init-db
+    image: postgres:12.6
+    volumes:
+      - ./install/init-prod.sql:/init-prod.sql
+    command: 'psql -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f init-prod.sql'
+    env_file:
+      - .env
+    networks:
+      - aiven
+
+  aiven-checker-testing:
+    container_name: aiven-checker-testing
+    build:
+      context: checker
+    env_file:
+      - .env
+    command: python -m pytest test.py
+    volumes:
+    - ./checker:/src
+    networks:
+      - aiven
+
+  aiven-postgres-testing:
+    container_name: aiven-postgres-testing
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=aiven-postgres-testing
+      - POSTGRES_PORT=5432
+    volumes:
+      - ./install/init-dev.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - aiven
+
+  aiven-consumer-testing:
+    container_name: aiven-consumer-testing
+    build:
+      context: consumer
+    env_file:
+      - .env
+    command: python -m pytest -s test.py
+    depends_on:
+      - aiven-postgres-testing
+    volumes:
+    - ./consumer:/src
+    networks:
+      - aiven
+
+networks:
+  aiven:
